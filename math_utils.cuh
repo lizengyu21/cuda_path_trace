@@ -24,7 +24,7 @@ inline __device__ __host__ float clamp(float min, float max, float t) {
 }
 
 __device__ __host__ inline float3 reflect(const float3 &v, const float3 &n) {
-    return v - 2.0f * dot(v, n) * n; 
+    return unit(v - 2.0f * dot(v, n) * n); 
 }
 
 __device__ __host__ inline float3 random_on_unit_sphere(thrust::default_random_engine &rng) {

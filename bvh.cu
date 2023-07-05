@@ -136,9 +136,9 @@ void BVH::build() {
     thrust::transform(dev_spheres.begin(), dev_spheres.end(), dev_aabbs.begin() + internal_nodes_count, sphere_aabb_getter());
     host_aabbs = dev_aabbs;
 
-    for (auto i : host_aabbs) {
-        std::clog << i.lower << ' ' << i.upper << '\n';
-    }
+    // for (auto i : host_aabbs) {
+    //     std::clog << i.lower << ' ' << i.upper << '\n';
+    // }
 
     const auto whole_aabb = thrust::reduce(dev_aabbs.begin() + internal_nodes_count, dev_aabbs.end(), default_aabb, aabb_merger());
     
