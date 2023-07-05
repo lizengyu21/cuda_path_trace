@@ -4,10 +4,12 @@ __host__ DeviceBVH BVH::get_dev_bvh() noexcept {
     return DeviceBVH{
         static_cast<unsigned int>(dev_nodes.size()),
         static_cast<unsigned int>(dev_spheres.size()),
+        static_cast<unsigned int>(dev_triangles.size()),
         static_cast<unsigned int>(dev_spheres.size() + 0),
         thrust::raw_pointer_cast(dev_nodes.data()), 
         thrust::raw_pointer_cast(dev_aabbs.data()), 
         thrust::raw_pointer_cast(dev_spheres.data()),
+        thrust::raw_pointer_cast(dev_triangles.data()),
     };
 }
 
@@ -106,10 +108,14 @@ __device__ void cast_ray(const PathState &path_state, HitRecord &record, const D
             // hit the aabb
             if (self.nodes[cur_index].left_child != 0xFFFFFFFF) stack[size++] = self.nodes[cur_index].left_child;
             if (self.nodes[cur_index].right_child != 0xFFFFFFFF) stack[size++] = self.nodes[cur_index].right_child;
-            if (self.nodes[cur_index].object_index != 0xFFFFFFFF) {
+            unsigned int object_index = self.nodes[cur_index].object_index;
+            if (object_index != 0xFFFFFFFF) {
                 // hit the leaves node
                 // TODO:
-                self.spheres[self.nodes[cur_index].object_index].intersect(path_state, record);
+                if (object_index < self.sphere_count)
+                    self.spheres[object_index].intersect(path_state, record);
+                else if (object_index < self.sphere_count + self.triangle_count)
+                    self.triangles[object_index - self.sphere_count].intersect(path_state, record);
             }
         }
     }
@@ -120,11 +126,13 @@ __device__ void cast_ray(const PathState &path_state, HitRecord &record, const D
 void BVH::build() {
     // check correctness of objects
     assert(host_spheres.size() == dev_spheres.size());
+    assert(host_triangles.size() == dev_triangles.size());
 
-    if (host_spheres.size() == 0) return;
+    if (host_spheres.size() == 0 && host_triangles.size() == 0) return;
     // record counts of all objects
     const unsigned int spheres_count = host_spheres.size();
-    const unsigned int objects_count = spheres_count + 0;
+    const unsigned int triangles_count = host_triangles.size();
+    const unsigned int objects_count = spheres_count + triangles_count;
     const unsigned int internal_nodes_count = objects_count - 1;
     const unsigned int nodes_count = objects_count + internal_nodes_count;
     // construct defalut aabb data
@@ -134,6 +142,7 @@ void BVH::build() {
     host_aabbs.resize(nodes_count, default_aabb);
     // create sphere aabbs in GPU
     thrust::transform(dev_spheres.begin(), dev_spheres.end(), dev_aabbs.begin() + internal_nodes_count, sphere_aabb_getter());
+    thrust::transform(dev_triangles.begin(), dev_triangles.end(), dev_aabbs.begin() + internal_nodes_count + spheres_count, triangle_aabb_getter());
     host_aabbs = dev_aabbs;
 
 

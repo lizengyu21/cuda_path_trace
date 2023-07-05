@@ -32,14 +32,15 @@ struct Node {
     unsigned int object_index = 0xFFFFFFFF;
 };
 
-struct DeviceBVH
-{
+struct DeviceBVH {
     unsigned int node_count;
     unsigned int sphere_count;
+    unsigned int triangle_count;
     unsigned int object_count;
     Node *nodes;
     Aabb *aabbs;
     Sphere *spheres;
+    Triangle *triangles;
 };
 
 
@@ -47,15 +48,19 @@ class BVH {
 public:
     thrust::host_vector<Sphere> host_spheres;
     thrust::device_vector<Sphere> dev_spheres;
+
+    thrust::host_vector<Triangle> host_triangles;
+    thrust::device_vector<Triangle> dev_triangles;
+
     thrust::host_vector<Aabb> host_aabbs;
     thrust::device_vector<Aabb> dev_aabbs;
     thrust::device_vector<Node> dev_nodes;
     thrust::host_vector<Node> host_nodes;
 
-    template <class SphereInputIterator>
-    BVH(SphereInputIterator sphere_first = 0, SphereInputIterator sphere_end = 0)
-        : host_spheres(sphere_first, sphere_end),
-        dev_spheres(host_spheres) {}
+    template <class SphereInputIterator, class TriangleInputIterator>
+    BVH(SphereInputIterator sphere_first = 0, SphereInputIterator sphere_end = 0, TriangleInputIterator triangle_first = 0, TriangleInputIterator triangle_end = 0)
+        : host_spheres(sphere_first, sphere_end), dev_spheres(host_spheres)
+        , host_triangles(triangle_first, triangle_end), dev_triangles(host_triangles) {}
 
     BVH() = default;
     __host__ DeviceBVH get_dev_bvh() noexcept;

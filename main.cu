@@ -14,10 +14,13 @@ std::ostream &operator<<(std::ostream &out, float3 c) {
 int main() {
     int SPP;
     float roughness;
+    float emittance;
     std::clog << "SPP: ";
     std::cin >> SPP;
     std::clog << "roughness: ";
     std::cin >> roughness;
+    std::clog << "emittance: ";
+    std::cin >>emittance;
 
     Render render;
     render.SPP = SPP;
@@ -33,7 +36,7 @@ int main() {
     render.host_material_buffer[2].albedo = make_float3(0.1, 0.1f, 1);
 
     render.host_material_buffer.push_back(Material());
-    render.host_material_buffer[3].emittance = 16.0f;
+    render.host_material_buffer[3].emittance = emittance;
     render.host_material_buffer[3].albedo = make_float3(1, 1, 1);
 
     render.host_material_buffer.push_back(Material(MaterialType::METAL));
@@ -43,17 +46,18 @@ int main() {
     render.host_material_buffer[5].albedo = make_float3(0.5, 0.5, 0.5);
     
     std::vector<Sphere> spheres;
-    spheres.push_back(Sphere(make_float3(0, 0, -15), 3, 0));
+    // spheres.push_back(Sphere(make_float3(0, 0, -15), 3, 0));
     spheres.push_back(Sphere(make_float3(1000, 0, -15), 995, 1));
     spheres.push_back(Sphere(make_float3(-1000, 0, -15), 995, 2));
     spheres.push_back(Sphere(make_float3(0, 10, -14), 3, 3));
-    spheres.push_back(Sphere(make_float3(0, 0, -1000), 980, 4));
+    spheres.push_back(Sphere(make_float3(0, 0, -1000), 980, 5));
     // spheres.push_back(Sphere(make_float3(6, -7, -14), 3, 3));
-    spheres.push_back(Sphere(make_float3(0, -1000, 0), 993, 5));
+    // spheres.push_back(Sphere(make_float3(0, -1000, 0), 993, 5));
     // spheres.push_back(Sphere(make_float3(0, 0, 0), 1000, 5));
-
-    
-    render.bvh = BVH(spheres.begin(), spheres.end());
+    std::vector<Triangle> triangles;
+    triangles.push_back(Triangle(make_float3(-5, 0, -13), make_float3(5, 0, -13), make_float3(0, 5, -16), 4));
+    // triangles.push_back(Triangle(make_float3(5, 0, -10), make_float3(-5, 0, -10), make_float3(0, 5, -13), 0));
+    render.bvh = BVH(spheres.begin(), spheres.end(), triangles.begin(), triangles.end());
     CameraSetting camera_setting;
     // float a;
     // std::cin >> a;
