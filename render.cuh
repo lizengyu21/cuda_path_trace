@@ -27,7 +27,7 @@
 class Render {
 public:
     int trace_depth = 10; // number of bounce times
-    int SPP = 4096;
+    int SPP = 128;
     Camera camera;
     BVH bvh;
     thrust::host_vector<PathState> host_path_state_buffer;

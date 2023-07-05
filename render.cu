@@ -20,34 +20,33 @@ __global__ void compute_intersections(
 }
 
 __device__ void scatter_path(PathState &path_state, HitRecord &hit_record, const Material &m, thrust::default_random_engine &rng) {
-    thrust::uniform_real_distribution<float> u_01(0, 1);
-    float probability = u_01(rng);
-    float3 original_dircetion = path_state.ray.direction;
-    if (probability < m.has_refractive) {
-        // refractive
-        assert(0);
-    } else if (probability < m.has_reflective) {
-        // reflective
-        // assert(0);
-        path_state.ray.direction = unit(reflect(path_state.ray.direction, hit_record.normal));
-        path_state.ray.direction_inverse = 1.0f / path_state.ray.direction;
-        path_state.ray.position = hit_record.position + 0.00001f * hit_record.normal;
-        path_state.color = path_state.color * m.specular.color;
-    } else {
-        // pure diffuse
-        path_state.ray.direction = random_on_hemi_sphere(rng, hit_record.normal);
-        path_state.ray.direction_inverse = 1.0f / path_state.ray.direction;
-        path_state.ray.position = hit_record.position + 0.00001f * hit_record.normal;
-    }
+    // thrust::uniform_real_distribution<float> u_01(0, 1);
+    // float probability = u_01(rng);
+    // if (probability < m.has_refractive) {
+    //     // refractive
+    //     assert(0);
+    // } else if (probability < m.has_reflective) {
+    //     // reflective
+    //     // assert(0);
+    //     path_state.ray.direction = unit(reflect(path_state.ray.direction, hit_record.normal));
+    //     path_state.ray.direction_inverse = 1.0f / path_state.ray.direction;
+    //     path_state.ray.position = hit_record.position + 0.00001f * hit_record.normal;
+    //     path_state.attenuation = path_state.attenuation * m.specular.color;
+    // } else {
+    //     // pure diffuse
+    //     path_state.ray.direction = random_on_hemi_sphere(rng, hit_record.normal);
+    //     path_state.ray.direction_inverse = 1.0f / path_state.ray.direction;
+    //     path_state.ray.position = hit_record.position + 0.00001f * hit_record.normal;
+    // }
 
-    path_state.color = path_state.color * m.color;
-    --(path_state.remaining_iteration);
+    // path_state.attenuation = path_state.attenuation * m.albedo;
+    // --(path_state.remaining_iteration);
 }
 
 __global__ void gather(const unsigned int path_count, const PathState *path_state, float3 *image) {
     unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index < path_count) {
-        image[index] = image[index] + path_state[index].color;
+        image[index] = image[index] + path_state[index].result;
     }
     __syncthreads();
 }
@@ -59,24 +58,26 @@ __global__ void shade_material(const int path_count, PathState *path_state, HitR
     unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index < path_count && path_state[index].remaining_iteration > 0) {
         HitRecord hit_record = records[index];
-        
         if (hit_record.missed) {
-            path_state[index].color = make_float3(0.05, 0.05, 0.05);
+            path_state[index].attenuation = make_float3(0.0, 0.0, 0.0);
             path_state[index].remaining_iteration = 0;
         } else {
             Material material = materials[hit_record.material_index];
-            // path_state[index].color = (unit(hit_record.position + make_float3(1, 1, 1)));
-            // path_state[index].remaining_iteration = 0;
-            // return;
-            if (material.emittance > 0.00001f) {
-                // hit the light
-                path_state[index].color = path_state[index].color * (material.emittance * material.color);
-                path_state[index].remaining_iteration = 0;
-            } else {
-                thrust::default_random_engine rng;
-                rng = make_seeded_random_engine(iter, index, path_state[index].remaining_iteration);
-                scatter_path(path_state[index], hit_record, material, rng);
-            }
+            thrust::default_random_engine rng;
+            rng = make_seeded_random_engine(iter, index, path_state[index].remaining_iteration);
+            material.shade(path_state[index], hit_record, rng);
+
+
+            // if (material.emittance > 0.00001f) {
+            //     // hit the light
+            //     path_state[index].result = path_state[index].result + path_state[index].attenuation * (material.emittance * material.albedo);
+            //     path_state[index].remaining_iteration = 0;
+            // } else {
+            //     thrust::default_random_engine rng;
+            //     rng = make_seeded_random_engine(iter, index, path_state[index].remaining_iteration);
+            //     scatter_path(path_state[index], hit_record, material, rng);
+            //     material.shade(path_state[index], hit_record, rng);
+            // }
         }
     }
 
@@ -96,7 +97,7 @@ __global__ void generate_ray_from_camera(PathState *dev_path_state_buffer, Camer
 
         // anti_alias start
         thrust::default_random_engine rng;
-        rng = make_seeded_random_engine(iter, index, state.color.x);
+        rng = make_seeded_random_engine(iter, index, state.attenuation.x);
         thrust::uniform_real_distribution<float> u_01(-0.5f, 0.5f);
         x_offseted += u_01(rng);
         y_offseted += u_01(rng);
@@ -112,7 +113,8 @@ __global__ void generate_ray_from_camera(PathState *dev_path_state_buffer, Camer
         state.ray.direction = unit(camera.lower_left_corner + u * camera.horizontal + v * camera.vertical - camera.origin - o_offset);
         state.ray.direction_inverse = 1.0f / state.ray.direction;
         // set other params
-        state.color = make_float3(1, 1, 1);
+        state.attenuation = make_float3(1, 1, 1);
+        state.result = make_float3(0, 0, 0);
         state.pixel_index = index;
         state.remaining_iteration = trace_depth;
     }
@@ -182,7 +184,7 @@ void Render::print_image(const float3 *image) {
     for (int j = 0; j < camera.pixel_vertical_length; ++j)
         for (int i = 0; i < camera.pixel_horizontal_length; ++i) {
             int index = i + j * camera.pixel_horizontal_length;
-            write_color(std::cout, host_path_state_buffer[index].color / SPP);
+            write_color(std::cout, host_path_state_buffer[index].attenuation / SPP);
         }
 }
 

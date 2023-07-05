@@ -13,7 +13,8 @@ public:
 class PathState {
 public:
     Ray ray;
-    float3 color;
+    float3 attenuation;
+    float3 result;
     int pixel_index;
     int remaining_iteration;
     __host__ __device__ float3 intersaction_point(float t) const noexcept { return ray.position + (t * ray.direction); }
