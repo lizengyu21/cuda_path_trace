@@ -2,6 +2,8 @@
 #include "ray.cuh"
 #include "record.cuh"
 #include "aabb.cuh"
+#include <thrust/host_vector.h>
+#include <string>
 
 class Sphere {
 public:
@@ -50,3 +52,9 @@ struct triangle_aabb_getter {
     }
 };
 
+class MeshTriangle {
+    thrust::host_vector<Triangle> triangles;
+    MeshTriangle(const std::string &filename, unsigned int m_id) {
+
+    }
+};

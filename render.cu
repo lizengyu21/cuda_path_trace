@@ -66,21 +66,9 @@ __global__ void shade_material(const int path_count, PathState *path_state, HitR
             thrust::default_random_engine rng;
             rng = make_seeded_random_engine(iter, index, path_state[index].remaining_iteration);
             material.shade(path_state[index], hit_record, rng);
-
-
-            // if (material.emittance > 0.00001f) {
-            //     // hit the light
-            //     path_state[index].result = path_state[index].result + path_state[index].attenuation * (material.emittance * material.albedo);
-            //     path_state[index].remaining_iteration = 0;
-            // } else {
-            //     thrust::default_random_engine rng;
-            //     rng = make_seeded_random_engine(iter, index, path_state[index].remaining_iteration);
-            //     scatter_path(path_state[index], hit_record, material, rng);
-            //     material.shade(path_state[index], hit_record, rng);
-            // }
         }
     }
-
+    
     __syncthreads();
 }
 

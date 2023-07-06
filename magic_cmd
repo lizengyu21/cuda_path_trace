@@ -1,0 +1,1 @@
+nvcc main.cu aabb.cu bvh.cu morton_code.cu ray.cu object.cu render.cu material.cu -o main --extended-lambda -rdc=true

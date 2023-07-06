@@ -8,8 +8,8 @@ struct CameraSetting
 {
     int pixel_vertical_length = 756;
     float aperture = 0;
-    float3 look_from = make_float3(0, 10, 0);
-    float3 look_at = make_float3(0, 0, -15);
+    float3 look_from = make_float3(0, 0, 1.0);
+    float3 look_at = make_float3(0, 0, -1.0f);
     float3 up = make_float3(0, 1.0f, 0);
     float fovY = 90.0f;
     float focal_length = 2.0f;

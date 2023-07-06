@@ -26,7 +26,7 @@
 
 class Render {
 public:
-    int trace_depth = 10; // number of bounce times
+    int trace_depth = 20; // number of bounce times
     int SPP = 128;
     Camera camera;
     BVH bvh;

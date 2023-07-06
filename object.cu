@@ -25,7 +25,7 @@ __device__ void Sphere::intersect(const PathState &path_state, HitRecord &record
 }
 
 __device__ void Triangle::intersect(const PathState &path_state, HitRecord &record) {
-    if (dot(path_state.ray.direction, this->normal) > 0) return;
+    // if (dot(path_state.ray.direction, this->normal) > 0) return;
     float u, v, t_tmp = 0;
     float3 p_vec = cross(path_state.ray.direction, e2);
     float det = dot(e1, p_vec);
@@ -41,7 +41,7 @@ __device__ void Triangle::intersect(const PathState &path_state, HitRecord &reco
     if (t_tmp > 0 && t_tmp < record.t) {
         record.t = t_tmp;
         record.missed = false;
-        record.normal = this->normal;
+        record.normal = (dot(path_state.ray.direction, this->normal) < 0) ? this->normal : -(this->normal);
         record.position = path_state.intersaction_point(t_tmp);
         record.material_index = this->material_index;
     }
