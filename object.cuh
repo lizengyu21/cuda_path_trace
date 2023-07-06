@@ -52,9 +52,3 @@ struct triangle_aabb_getter {
     }
 };
 
-class MeshTriangle {
-    thrust::host_vector<Triangle> triangles;
-    MeshTriangle(const std::string &filename, unsigned int m_id) {
-
-    }
-};

@@ -40,8 +40,7 @@ __global__ void shade_material(const int path_count, PathState *path_state, HitR
         } else {
             Material material = materials[hit_record.material_index];
             thrust::default_random_engine rng;
-            path_state[index].seed = make_seed(iter, path_state[index].seed, path_state[index].remaining_iteration);
-            rng.discard(path_state[index].seed);
+            rng = make_seeded_random_engine(iter, index, path_state[index].remaining_iteration);
             material.shade(path_state[index], hit_record, rng);
         }
     }
@@ -61,8 +60,7 @@ __global__ void generate_ray_from_camera(PathState *dev_path_state_buffer, Camer
         float y_offseted = y;
 
         // anti_alias start
-        state.seed = make_seed(iter, index, state.remaining_iteration);
-        thrust::default_random_engine rng(state.seed);
+        thrust::default_random_engine rng = make_seeded_random_engine(iter, index, state.remaining_iteration);
         thrust::uniform_real_distribution<float> u_01(0.0f, 1.0f);
         x_offseted += u_01(rng);
         y_offseted += u_01(rng);

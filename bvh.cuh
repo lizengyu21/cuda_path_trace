@@ -22,6 +22,7 @@
 #include "aabb.cuh"
 #include "ray.cuh"
 #include "record.cuh"
+#include "mesh.cuh"
 
 std::ostream &operator<<(std::ostream &out, float3 c);
 
@@ -62,11 +63,15 @@ public:
         : host_spheres(sphere_first, sphere_end), dev_spheres(host_spheres)
         , host_triangles(triangle_first, triangle_end), dev_triangles(host_triangles) {}
 
+        template <class TriangleInputIterator>
+    BVH(TriangleInputIterator triangle_first = 0, TriangleInputIterator triangle_end = 0)
+        : host_triangles(triangle_first, triangle_end), dev_triangles(host_triangles) {}
+
     BVH() = default;
     __host__ DeviceBVH get_dev_bvh() noexcept;
 
     void build();
-    __host__ __device__ bool is_empty() { return dev_nodes.size() == 0; }
+    __host__ bool is_empty() { return dev_nodes.size() == 0; }
     template <class MortonType>
     void construct_internal_nodes(const DeviceBVH &self, const MortonType *morton, const unsigned int objects_count);
 };

@@ -17,6 +17,5 @@ public:
     float3 result;
     int pixel_index;
     int remaining_iteration;
-    unsigned int seed;
     __host__ __device__ float3 intersaction_point(float t) const noexcept { return ray.position + (t * ray.direction); }
 };

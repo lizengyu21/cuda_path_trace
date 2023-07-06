@@ -139,16 +139,12 @@ void BVH::build() {
     const auto inf = std::numeric_limits<float>::infinity();
     Aabb default_aabb(make_float3(inf, inf, inf), make_float3(-inf, -inf, -inf));
     dev_aabbs.resize(nodes_count, default_aabb);
-    host_aabbs.resize(nodes_count, default_aabb);
     // create sphere aabbs in GPU
     thrust::transform(dev_spheres.begin(), dev_spheres.end(), dev_aabbs.begin() + internal_nodes_count, sphere_aabb_getter());
     thrust::transform(dev_triangles.begin(), dev_triangles.end(), dev_aabbs.begin() + internal_nodes_count + spheres_count, triangle_aabb_getter());
-    host_aabbs = dev_aabbs;
-
 
     const auto whole_aabb = thrust::reduce(dev_aabbs.begin() + internal_nodes_count, dev_aabbs.end(), default_aabb, aabb_merger());
     
-    std::clog << whole_aabb.lower << ' ' << whole_aabb.upper << '\n';
 
     // calculate morton code
     thrust::device_vector<unsigned int> morton(objects_count);
