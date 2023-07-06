@@ -23,6 +23,7 @@
 #include <thrust/iterator/counting_iterator.h>
 #include <thrust/execution_policy.h>
 #include <thrust/random.h>
+#include <thrust/partition.h>
 
 class Render {
 public:

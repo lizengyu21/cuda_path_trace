@@ -5,9 +5,11 @@
 static __constant__ float MPI = 3.14159265358979323846;
 
 __device__ void direct_callable_diffuse(PathState &path_state, const HitRecord &record, thrust::default_random_engine &rng, Material material) {
-    if (material.emittance > 0.00001f) 
+    if (material.emittance > 0.00001f) {
         path_state.result = path_state.result + path_state.attenuation * (material.emittance * material.albedo);
-    
+        path_state.remaining_iteration = 0;
+        return;
+    }
     path_state.ray.direction = random_on_hemi_sphere(rng, record.normal);
     path_state.ray.direction_inverse = 1.0f / path_state.ray.direction;
 

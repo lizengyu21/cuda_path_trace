@@ -2,6 +2,14 @@
 #include <assert.h>
 #include <iomanip>
 #include "rand.cuh"
+
+struct split_by_completed {
+    __host__ __device__ bool operator() (const PathState &segment) {
+        return segment.remaining_iteration > 0;
+    }
+};
+
+
 class BVH;
 
 __global__ void compute_intersections(
@@ -11,7 +19,7 @@ __global__ void compute_intersections(
     HitRecord *dev_hit_record_buffer,
     DeviceBVH device_bvh) {
     int path_index = threadIdx.x + blockIdx.x * blockDim.x;
-    if (path_index < total_path_count && dev_path_state_buffer[path_index].remaining_iteration > 0) {
+    if (path_index < total_path_count) {
         if (is_empty) return;
         PathState state = dev_path_state_buffer[path_index];
         cast_ray(state, dev_hit_record_buffer[path_index], device_bvh);
@@ -22,7 +30,7 @@ __global__ void compute_intersections(
 __global__ void gather(const unsigned int path_count, const PathState *path_state, float3 *image) {
     unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index < path_count) {
-        image[index] = image[index] + path_state[index].result;
+        image[path_state[index].pixel_index] = image[path_state[index].pixel_index] + path_state[index].result;
     }
     __syncthreads();
 }
@@ -108,13 +116,14 @@ void Render::path_trace() {
     thrust::device_vector<float3> dev_image;
     thrust::host_vector<float3> host_image;
     dev_image.resize(pixel_count, make_float3(0, 0, 0));
-    dim3 blocks_per_grid1d((path_count + threads_per_block1d - 1) / threads_per_block1d);
 
     for (int i = 0; i < SPP; i++) {
+        
         cur_depth = 0;
         generate_ray_from_camera<<<blocks_per_grid2d, threads_per_block2d>>>(thrust::raw_pointer_cast(dev_path_state_buffer.data()), camera, trace_depth, i);
 
         while (cur_depth < trace_depth) {
+            dim3 blocks_per_grid1d((path_count + threads_per_block1d - 1) / threads_per_block1d);
             dev_hit_record_buffer.clear();
             dev_hit_record_buffer.resize(pixel_count, HitRecord());
 
@@ -122,10 +131,15 @@ void Render::path_trace() {
             cudaDeviceSynchronize();
 
             shade_material<<< blocks_per_grid1d, threads_per_block1d >>>(path_count, thrust::raw_pointer_cast(dev_path_state_buffer.data()), thrust::raw_pointer_cast(dev_hit_record_buffer.data()), thrust::raw_pointer_cast(dev_material_buffer.data()), i);
+            auto pivot = thrust::partition(thrust::device, dev_path_state_buffer.begin(), dev_path_state_buffer.begin() + path_count, split_by_completed());
+            path_count = pivot - dev_path_state_buffer.begin();
+            if (path_count < 1) cur_depth = trace_depth;
             ++cur_depth;
         }
-
+        path_count = pixel_count;
+        dim3 blocks_per_grid1d((path_count + threads_per_block1d - 1) / threads_per_block1d);
         gather<<< blocks_per_grid1d, threads_per_block1d >>>(path_count, dev_path_state_buffer.data().get(), thrust::raw_pointer_cast(dev_image.data()));
+        
         show_progress_bar(i, SPP);
     }
     host_image = dev_image;
