@@ -31,7 +31,7 @@ __device__ __host__ inline float3 random_on_unit_sphere(thrust::default_random_e
     thrust::uniform_real_distribution<float> u_01(0, 1);
     while (true) {
         float3 v = make_float3(u_01(rng) * 2.0f - 1.0f, u_01(rng) * 2.0f - 1.0f, u_01(rng) * 2.0f - 1.0f);
-        if (length_squared(v) < 1.0f) continue;
+        if (length_squared(v) >= 1.0f) continue;
         return unit(v);
     }
 }

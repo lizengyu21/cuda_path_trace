@@ -15,3 +15,7 @@ __host__ __device__ inline thrust::default_random_engine make_seeded_random_engi
   int h = util_hash((1 << 31) | (depth << 22) | iter) ^ util_hash(index);
   return thrust::default_random_engine(h);
 }
+
+__host__ __device__ inline unsigned int make_seed(int iter, int index, int depth) {
+  return util_hash((1 << 31) | (depth << 22) | iter) ^ util_hash(index);
+}

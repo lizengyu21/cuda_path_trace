@@ -19,30 +19,6 @@ __global__ void compute_intersections(
     __syncthreads();
 }
 
-__device__ void scatter_path(PathState &path_state, HitRecord &hit_record, const Material &m, thrust::default_random_engine &rng) {
-    // thrust::uniform_real_distribution<float> u_01(0, 1);
-    // float probability = u_01(rng);
-    // if (probability < m.has_refractive) {
-    //     // refractive
-    //     assert(0);
-    // } else if (probability < m.has_reflective) {
-    //     // reflective
-    //     // assert(0);
-    //     path_state.ray.direction = unit(reflect(path_state.ray.direction, hit_record.normal));
-    //     path_state.ray.direction_inverse = 1.0f / path_state.ray.direction;
-    //     path_state.ray.position = hit_record.position + 0.00001f * hit_record.normal;
-    //     path_state.attenuation = path_state.attenuation * m.specular.color;
-    // } else {
-    //     // pure diffuse
-    //     path_state.ray.direction = random_on_hemi_sphere(rng, hit_record.normal);
-    //     path_state.ray.direction_inverse = 1.0f / path_state.ray.direction;
-    //     path_state.ray.position = hit_record.position + 0.00001f * hit_record.normal;
-    // }
-
-    // path_state.attenuation = path_state.attenuation * m.albedo;
-    // --(path_state.remaining_iteration);
-}
-
 __global__ void gather(const unsigned int path_count, const PathState *path_state, float3 *image) {
     unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index < path_count) {
@@ -64,7 +40,8 @@ __global__ void shade_material(const int path_count, PathState *path_state, HitR
         } else {
             Material material = materials[hit_record.material_index];
             thrust::default_random_engine rng;
-            rng = make_seeded_random_engine(iter, index, path_state[index].remaining_iteration);
+            path_state[index].seed = make_seed(iter, path_state[index].seed, path_state[index].remaining_iteration);
+            rng.discard(path_state[index].seed);
             material.shade(path_state[index], hit_record, rng);
         }
     }
@@ -80,13 +57,13 @@ __global__ void generate_ray_from_camera(PathState *dev_path_state_buffer, Camer
         PathState &state = dev_path_state_buffer[index];
         
         // calculat the ray params
-        float x_offseted = x + 0.5;
-        float y_offseted = y + 0.5;
+        float x_offseted = x;
+        float y_offseted = y;
 
         // anti_alias start
-        thrust::default_random_engine rng;
-        rng = make_seeded_random_engine(iter, index, state.attenuation.x);
-        thrust::uniform_real_distribution<float> u_01(-0.5f, 0.5f);
+        state.seed = make_seed(iter, index, state.remaining_iteration);
+        thrust::default_random_engine rng(state.seed);
+        thrust::uniform_real_distribution<float> u_01(0.0f, 1.0f);
         x_offseted += u_01(rng);
         y_offseted += u_01(rng);
         // end
@@ -134,22 +111,18 @@ void Render::path_trace() {
     thrust::host_vector<float3> host_image;
     dev_image.resize(pixel_count, make_float3(0, 0, 0));
     dim3 blocks_per_grid1d((path_count + threads_per_block1d - 1) / threads_per_block1d);
-    // thrust::device_vector<HitRecord> dev_cached_hit_record;
-    // std::clog << "1\n";
+
     for (int i = 0; i < SPP; i++) {
         cur_depth = 0;
         generate_ray_from_camera<<<blocks_per_grid2d, threads_per_block2d>>>(thrust::raw_pointer_cast(dev_path_state_buffer.data()), camera, trace_depth, i);
-        // std::clog << "1\n";
+
         while (cur_depth < trace_depth) {
-            // reset hit record buffer
-            // dev_hit_record_buffer.assign(dev_hit_record_buffer.size(), HitRecord());
             dev_hit_record_buffer.clear();
             dev_hit_record_buffer.resize(pixel_count, HitRecord());
-            // std::clog << "1\n";
+
             compute_intersections<<< blocks_per_grid1d, threads_per_block1d >>>(path_count, bvh.is_empty(), thrust::raw_pointer_cast(dev_path_state_buffer.data()), thrust::raw_pointer_cast(dev_hit_record_buffer.data()), bvh.get_dev_bvh());
             cudaDeviceSynchronize();
-            // std::clog << "1\n";
-            // dev_cached_hit_record = dev_hit_record_buffer;
+
             shade_material<<< blocks_per_grid1d, threads_per_block1d >>>(path_count, thrust::raw_pointer_cast(dev_path_state_buffer.data()), thrust::raw_pointer_cast(dev_hit_record_buffer.data()), thrust::raw_pointer_cast(dev_material_buffer.data()), i);
             ++cur_depth;
         }
