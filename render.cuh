@@ -1,7 +1,6 @@
 #pragma once
 #include "camera.cuh"
 #include "ray.cuh"
-#include "scene.cuh"
 #include "bvh.cuh"
 #include "object.cuh"
 #include "material.cuh"
@@ -37,6 +36,8 @@ public:
     thrust::device_vector<HitRecord> dev_hit_record_buffer;
     thrust::device_vector<Material> dev_material_buffer;
     thrust::host_vector<Material> host_material_buffer;
+    thrust::device_vector<Aabb> dev_direct_light_aabb_buffer;
+    thrust::host_vector<Aabb> host_direct_light_aabb_buffer;
     Render() {}
     void print_image(const float3 *);
     void init();

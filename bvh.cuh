@@ -53,10 +53,8 @@ public:
     thrust::host_vector<Triangle> host_triangles;
     thrust::device_vector<Triangle> dev_triangles;
 
-    thrust::host_vector<Aabb> host_aabbs;
     thrust::device_vector<Aabb> dev_aabbs;
     thrust::device_vector<Node> dev_nodes;
-    thrust::host_vector<Node> host_nodes;
 
     template <class SphereInputIterator, class TriangleInputIterator>
     BVH(SphereInputIterator sphere_first = 0, SphereInputIterator sphere_end = 0, TriangleInputIterator triangle_first = 0, TriangleInputIterator triangle_end = 0)

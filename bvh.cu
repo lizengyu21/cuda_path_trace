@@ -111,7 +111,6 @@ __device__ void cast_ray(const PathState &path_state, HitRecord &record, const D
             unsigned int object_index = self.nodes[cur_index].object_index;
             if (object_index != 0xFFFFFFFF) {
                 // hit the leaves node
-                // TODO:
                 if (object_index < self.sphere_count)
                     self.spheres[object_index].intersect(path_state, record);
                 else if (object_index < self.sphere_count + self.triangle_count)
@@ -139,7 +138,7 @@ void BVH::build() {
     const auto inf = std::numeric_limits<float>::infinity();
     Aabb default_aabb(make_float3(inf, inf, inf), make_float3(-inf, -inf, -inf));
     dev_aabbs.resize(nodes_count, default_aabb);
-    // create sphere aabbs in GPU
+    // create object aabbs in GPU
     thrust::transform(dev_spheres.begin(), dev_spheres.end(), dev_aabbs.begin() + internal_nodes_count, sphere_aabb_getter());
     thrust::transform(dev_triangles.begin(), dev_triangles.end(), dev_aabbs.begin() + internal_nodes_count + spheres_count, triangle_aabb_getter());
 

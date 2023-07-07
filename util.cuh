@@ -14,8 +14,3 @@ inline void check_cuda(cudaError_t result, char const *const file, unsigned int 
         exit(99);
     }
 }
-
-// std::ostream &operator<<(std::ostream &out, float3 c) {
-//     out << c.x << ' ' << c.y << ' ' << c.z;
-//     return out;
-// }

@@ -17,5 +17,6 @@ public:
     float3 result;
     int pixel_index;
     int remaining_iteration;
+    bool has_collect_direct_light = false;
     __host__ __device__ float3 intersaction_point(float t) const noexcept { return ray.position + (t * ray.direction); }
 };

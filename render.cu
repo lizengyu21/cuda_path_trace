@@ -9,7 +9,6 @@ struct split_by_completed {
     }
 };
 
-
 class BVH;
 
 __global__ void compute_intersections(
@@ -38,7 +37,7 @@ __global__ void gather(const unsigned int path_count, const PathState *path_stat
 
 
 
-__global__ void shade_material(const int path_count, PathState *path_state, HitRecord *records, Material *materials, const int iter) {
+__global__ void shade_material(const int path_count, PathState *path_state, HitRecord *records, Material *materials, const int iter, Aabb *lights, unsigned int light_count, DeviceBVH device_bvh) {
     unsigned int index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index < path_count && path_state[index].remaining_iteration > 0) {
         HitRecord hit_record = records[index];
@@ -49,7 +48,7 @@ __global__ void shade_material(const int path_count, PathState *path_state, HitR
             Material material = materials[hit_record.material_index];
             thrust::default_random_engine rng;
             rng = make_seeded_random_engine(iter, index, path_state[index].remaining_iteration);
-            material.shade(path_state[index], hit_record, rng);
+            material.shade(path_state[index], hit_record, rng, lights, light_count, device_bvh, materials);
         }
     }
     
@@ -87,16 +86,15 @@ __global__ void generate_ray_from_camera(PathState *dev_path_state_buffer, Camer
         state.attenuation = make_float3(1, 1, 1);
         state.result = make_float3(0, 0, 0);
         state.pixel_index = index;
+        state.has_collect_direct_light = false;
         state.remaining_iteration = trace_depth;
     }
 }
 
 static void write_color(std::ostream &out, float3 pixel_color) {
-    // assert(pixel_color.x <= 1.0f || pixel_color.y <= 1.0f || pixel_color.z <= 1.0f);
-    // assert(pixel_color.x >= 0.0f || pixel_color.y >= 0.0f || pixel_color.z >= 0.0f);
-    out << static_cast<int>(255.999 * clamp(0, 1, pixel_color.x)) << ' '
-        << static_cast<int>(255.999 * clamp(0, 1, pixel_color.y)) << ' '
-        << static_cast<int>(255.999 * clamp(0, 1, pixel_color.z)) << '\n';
+    out << static_cast<int>(255.999 * clamp(0.00001f, 1, pixel_color.x)) << ' '
+        << static_cast<int>(255.999 * clamp(0.00001f, 1, pixel_color.y)) << ' '
+        << static_cast<int>(255.999 * clamp(0.00001f, 1, pixel_color.z)) << '\n';
 }
 
 static void show_progress_bar(int now, int total) {
@@ -118,7 +116,6 @@ void Render::path_trace() {
     dev_image.resize(pixel_count, make_float3(0, 0, 0));
 
     for (int i = 0; i < SPP; i++) {
-        
         cur_depth = 0;
         generate_ray_from_camera<<<blocks_per_grid2d, threads_per_block2d>>>(thrust::raw_pointer_cast(dev_path_state_buffer.data()), camera, trace_depth, i);
 
@@ -130,7 +127,16 @@ void Render::path_trace() {
             compute_intersections<<< blocks_per_grid1d, threads_per_block1d >>>(path_count, bvh.is_empty(), thrust::raw_pointer_cast(dev_path_state_buffer.data()), thrust::raw_pointer_cast(dev_hit_record_buffer.data()), bvh.get_dev_bvh());
             cudaDeviceSynchronize();
 
-            shade_material<<< blocks_per_grid1d, threads_per_block1d >>>(path_count, thrust::raw_pointer_cast(dev_path_state_buffer.data()), thrust::raw_pointer_cast(dev_hit_record_buffer.data()), thrust::raw_pointer_cast(dev_material_buffer.data()), i);
+            shade_material<<< blocks_per_grid1d, threads_per_block1d >>>(
+                path_count, 
+                thrust::raw_pointer_cast(dev_path_state_buffer.data()), 
+                thrust::raw_pointer_cast(dev_hit_record_buffer.data()), 
+                thrust::raw_pointer_cast(dev_material_buffer.data()), 
+                i, 
+                thrust::raw_pointer_cast(dev_direct_light_aabb_buffer.data()), 
+                dev_direct_light_aabb_buffer.size(), 
+                bvh.get_dev_bvh());
+
             auto pivot = thrust::partition(thrust::device, dev_path_state_buffer.begin(), dev_path_state_buffer.begin() + path_count, split_by_completed());
             path_count = pivot - dev_path_state_buffer.begin();
             if (path_count < 1) cur_depth = trace_depth;
@@ -149,35 +155,35 @@ void Render::path_trace() {
             int index = i + j * camera.pixel_horizontal_length;
             write_color(std::cout, host_image[index] / SPP);
         }
-    // print_image(thrust::raw_pointer_cast(host_image));
-}
-
-void Render::print_image(const float3 *image) {
-    std::cout << "P3\n" << camera.pixel_horizontal_length << ' ' << camera.pixel_vertical_length << "\n255\n";
-    for (int j = 0; j < camera.pixel_vertical_length; ++j)
-        for (int i = 0; i < camera.pixel_horizontal_length; ++i) {
-            int index = i + j * camera.pixel_horizontal_length;
-            write_color(std::cout, host_path_state_buffer[index].attenuation / SPP);
-        }
 }
 
 void Render::init() {
     bvh.build();
-    bvh.host_nodes = bvh.dev_nodes;
-    bvh.host_aabbs = bvh.dev_aabbs;
-    // for (int i = 0; i < bvh.host_nodes.size(); ++i) {
-    //     std::clog << "node " << i << '\n';
-    //     std::clog << bvh.host_nodes[i].parent << ' ' << bvh.host_nodes[i].left_child << ' ' << bvh.host_nodes[i].right_child << ' ' << bvh.host_nodes[i].object_index << '\n';
-    //     std::clog << bvh.host_aabbs[i].lower << ' ' << bvh.host_aabbs[i].upper << '\n';
-    // }
+
+    {
+        thrust::host_vector<Sphere> host_sphere_temp = bvh.dev_spheres;
+        thrust::host_vector<Triangle> host_triangle_temp = bvh.dev_triangles;
+
+        for (const auto &sphere : host_sphere_temp) {
+            if (host_material_buffer[sphere.material_index].emittance > 0.0f) {
+                host_direct_light_aabb_buffer.push_back(sphere_aabb_getter()(sphere));
+            }
+        }
+
+        for (const auto &triangle : host_triangle_temp) {
+            if (host_material_buffer[triangle.material_index].emittance > 0.0f) {
+                host_direct_light_aabb_buffer.push_back(triangle_aabb_getter()(triangle));
+            }
+        }
+    }
+    dev_direct_light_aabb_buffer = host_direct_light_aabb_buffer;
+
     dev_material_buffer = host_material_buffer;
     const int pixel_count = camera.pixel_vertical_length * camera.pixel_horizontal_length;
     host_path_state_buffer.resize(pixel_count);
     host_hit_record_buffer.resize(pixel_count);
     dev_path_state_buffer.resize(pixel_count);
     dev_hit_record_buffer.resize(pixel_count);
-    // dev_path_state_buffer.alloc(pixel_count * sizeof(PathState));
-    // dev_hit_record_buffer.alloc(pixel_count * sizeof(HitRecord));
 }
 
 

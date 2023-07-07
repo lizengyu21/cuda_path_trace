@@ -36,7 +36,7 @@ public:
     }
 
     void contact_to_whole(thrust::host_vector<Triangle> &whole) {
-        // push this->host_triangles back to whole
+        // push this->host_triangles back to the whole
         whole.insert(whole.end(), this->host_triangles.begin(), this->host_triangles.end());
     }
 };

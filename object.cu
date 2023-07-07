@@ -1,9 +1,5 @@
 #include "object.cuh"
 
-// bool Sphere::intersect(const Ray &r, HitRecord &record) {
-    
-// }
-
 __device__ void Sphere::intersect(const PathState &path_state, HitRecord &record) {
     float3 oc = path_state.ray.position - origin;
     auto a = length_squared(path_state.ray.direction);
@@ -25,7 +21,6 @@ __device__ void Sphere::intersect(const PathState &path_state, HitRecord &record
 }
 
 __device__ void Triangle::intersect(const PathState &path_state, HitRecord &record) {
-    // if (dot(path_state.ray.direction, this->normal) > 0) return;
     float u, v, t_tmp = 0;
     float3 p_vec = cross(path_state.ray.direction, e2);
     float det = dot(e1, p_vec);

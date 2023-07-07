@@ -14,7 +14,6 @@ __device__ inline int common_prefix_bits_count(const unsigned long long int l, c
     return __clzll(l ^ r);
 }
 
-
 struct morton_code_calculator {
     Aabb whole;
     morton_code_calculator(Aabb box) : whole(box) {}

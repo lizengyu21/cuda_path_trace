@@ -15,7 +15,7 @@ public:
 };
 
 struct sphere_aabb_getter {
-    __device__ Aabb operator() (const Sphere &s) const noexcept {
+    __host__ __device__ Aabb operator() (const Sphere &s) const noexcept {
         float3 lower = make_float3(s.origin.x - s.radius, s.origin.y - s.radius, s.origin.z - s.radius);
         float3 upper = make_float3(s.origin.x + s.radius, s.origin.y + s.radius, s.origin.z + s.radius);
         return Aabb(lower, upper);
@@ -37,7 +37,7 @@ public:
 };
 
 struct triangle_aabb_getter {
-    __device__ Aabb operator() (const Triangle &t) const noexcept {
+    __host__ __device__ Aabb operator() (const Triangle &t) const noexcept {
         float x_min = min(t.v0.x, min(t.v1.x, t.v2.x));
         float y_min = min(t.v0.y, min(t.v1.y, t.v2.y));
         float z_min = min(t.v0.z, min(t.v1.z, t.v2.z));
