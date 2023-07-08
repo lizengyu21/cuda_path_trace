@@ -36,4 +36,5 @@ A cuda-based path tracer for graphical code practice, which is all implemented i
 - [GAMES101:《现代计算机图形学入门》](https://sites.cs.ucsb.edu/~lingqi/teaching/games101.html)
 - [Maximizing Parallelism in the Construction of BVHs, Octrees, and k-d Trees](https://research.nvidia.com/sites/default/files/pubs/2012-06_Maximizing-Parallelism-in/karras2012hpg_paper.pdf)
 - [Ray Tracing in One Weekend](https://github.com/RayTracing/raytracing.github.io)
+- [GitHub - hanbollar/CUDA-Path-Tracer](https://github.com/hanbollar/CUDA-Path-Tracer/)
 
