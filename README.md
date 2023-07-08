@@ -8,6 +8,7 @@ A cuda-based path tracer for graphical code practice, which is all implemented i
 - Implement diffuse materials, metal materials and dielectric material.
 - Implement light source importance sampling with AABB as a carrier
 - Support model import.
+- Implement Depth of Field.
 
 # Preview
 
