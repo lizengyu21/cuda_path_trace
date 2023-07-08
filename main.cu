@@ -15,10 +15,13 @@ void SCENE1() {
     float emittance;
     int trace_depth;
     float r;
+    float aperture;
     std::clog << "SPP: ";
     std::cin >> SPP;
     std::clog << "depth: ";
     std::cin >> trace_depth;
+    std::clog << "aperture: ";
+    std::cin >> aperture;
     std::clog << "roughness: ";
     std::cin >> roughness;
     std::clog << "emittance: ";
@@ -56,7 +59,7 @@ void SCENE1() {
     
     std::vector<Sphere> spheres;
     spheres.push_back(Sphere(make_float3(-2.5, -3, -11), 2, 4));
-    spheres.push_back(Sphere(make_float3(0, -3, -8.5), 2, 6));
+    spheres.push_back(Sphere(make_float3(0, -3, -8.5), 2, 5));
     spheres.push_back(Sphere(make_float3(2.5, -3, -6), 2, 5));
     // spheres.push_back(Sphere(make_float3(1000, 0, -15), 995, 1));
     // spheres.push_back(Sphere(make_float3(-1000, 0, -15), 995, 2));
@@ -88,6 +91,8 @@ void SCENE1() {
     render.bvh = BVH(spheres.begin(), spheres.end(), triangles.begin(), triangles.end());
 
     CameraSetting camera_setting;
+    camera_setting.focal_length = 8.5;
+    camera_setting.aperture = aperture;
     camera_setting.set_aspect_ratio(16.0f / 9.0f);
     camera_setting.set_focal_length(10);
     render.camera = camera_setting;
@@ -181,12 +186,15 @@ void SCENE3() {
     float y = -5;
     float z = -15;
     float length = 10;
+    float aperture;
     int trace_depth;
     float r;
     std::clog << "SPP: ";
     std::cin >> SPP;
     std::clog << "depth: ";
     std::cin >> trace_depth;
+    std::clog << "aperture: ";
+    std::cin >> aperture;
     std::clog << "roughness: ";
     std::cin >> roughness;
     std::clog << "emittance: ";
@@ -258,7 +266,7 @@ void SCENE3() {
     mesh.contact_to_whole(triangles);
     render.bvh = BVH(spheres.begin(), spheres.end(), triangles.begin(), triangles.end());
     CameraSetting camera_setting;
-
+    camera_setting.aperture = aperture;
     camera_setting.look_from = make_float3(-1, 6.6, 15);
     camera_setting.look_at = make_float3(-1, 6.6, -10);
 

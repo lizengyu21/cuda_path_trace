@@ -76,8 +76,7 @@ __global__ void generate_ray_from_camera(PathState *dev_path_state_buffer, Camer
         const float v = (1.0f * y_offseted) / (float)camera.pixel_vertical_length;
         float3 o_offset = make_float3(0, 0, 0);
         if (camera.radius > 0.00001f) {
-            float3 o_offset = camera.radius * random_on_unit_disk(rng);
-            assert(o_offset.y == 0.0f);
+            o_offset = camera.radius * random_on_unit_disk(rng);
             o_offset = o_offset.x * unit(camera.horizontal) + o_offset.y * unit(camera.vertical);
         }
         state.ray.position = camera.origin + o_offset;

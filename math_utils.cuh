@@ -38,7 +38,11 @@ __device__ __host__ inline float3 random_on_unit_sphere(thrust::default_random_e
 
 __device__ __host__ inline float3 random_on_unit_disk(thrust::default_random_engine &rng) {
     thrust::uniform_real_distribution<float> u_01(-1.0f, 1.0f);
-    return unit(make_float3(u_01(rng), u_01(rng), 0.0f));
+    while (true) {
+        float3 v = make_float3(u_01(rng), u_01(rng), 0.0f);
+        if (length_squared(v) >= 1.0f) continue;
+        return unit(v);
+    }
 }
 
 __device__ __host__ inline float3 random_on_hemi_sphere(thrust::default_random_engine &rng, const float3 &n) {

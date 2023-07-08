@@ -33,6 +33,7 @@ __device__ void sample_on_aabb(const Aabb &aabb, float &pdf_inv, float3 &destina
 }
 
 __device__ void sample_on_light(PathState &path_state, const HitRecord &record, Aabb *lights, unsigned int light_count, thrust::default_random_engine &rng, DeviceBVH self, Material *materials, float3 brdf) {
+    if (light_count == 0) return;
     path_state.has_collect_direct_light = true;
     
     thrust::uniform_real_distribution<unsigned int> u_0n(0, light_count);
@@ -73,12 +74,10 @@ __device__ void sample_on_light(PathState &path_state, const HitRecord &record, 
 __device__ void direct_callable_diffuse(PathState &path_state, const HitRecord &record, thrust::default_random_engine &rng, Material material, Aabb *light_bounds, unsigned int light_count, DeviceBVH device_bvh, Material *materials) {
     if (material.emittance > 0.00001f) { // hit direct light
         path_state.remaining_iteration = 0;
-        
         // has collected direct light
         if (!path_state.has_collect_direct_light) 
             path_state.result = path_state.result + material.emittance * material.albedo * path_state.attenuation;
         return;
-        
     } else {
         float3 brdf = material.albedo / MPI;
         sample_on_light(path_state, record, light_bounds, light_count, rng, device_bvh, materials, brdf);
