@@ -83,7 +83,6 @@ __device__ void direct_callable_diffuse(PathState &path_state, const HitRecord &
         float3 brdf = material.albedo / MPI;
         sample_on_light(path_state, record, light_bounds, light_count, rng, device_bvh, materials, brdf);
     }
-
     path_state.ray.direction = random_on_hemi_sphere(rng, record.normal);
     path_state.ray.direction_inverse = 1.0f / path_state.ray.direction;
 
@@ -95,8 +94,42 @@ __device__ void direct_callable_diffuse(PathState &path_state, const HitRecord &
 }
 
 __device__ void direct_callable_metal(PathState &path_state, const HitRecord &record, thrust::default_random_engine &rng, Material material, Aabb *light_bounds, unsigned int light_count, DeviceBVH device_bvh, Material *materials) {
+
     path_state.ray.position = record.position + 0.00001f * record.normal;
     path_state.ray.direction = unit(reflect(path_state.ray.direction, record.normal) + material.roughness * random_on_unit_sphere(rng));
+    path_state.ray.direction_inverse = 1.0f / path_state.ray.direction;
+    --(path_state.remaining_iteration);
+}
+
+static __forceinline__ __device__ float schlick_fresnel (float u) {
+    float m = clamp(0.0f, 1.0f, 1 - u);
+    float m_2 = m * m;
+    return m_2 * m_2 * m;
+}
+
+static __forceinline__ __device__ float schlick_fresnel_flectance (float cosine, float refractivity) {
+    float r0 = (1.0f - refractivity) / (1.0f + refractivity);
+    r0 = r0 * r0;
+    return r0 + (1.0f - r0) * schlick_fresnel(cosine);
+}
+
+
+__device__ void direct_callable_dielectric(PathState &path_state, const HitRecord &record, thrust::default_random_engine &rng, Material material, Aabb *light_bounds, unsigned int light_count, DeviceBVH device_bvh, Material *materials) {
+    
+    float refractivity = !record.outer ? material.refractivity : 1.0f / material.refractivity;
+    float cos_theta = fmin(dot(-path_state.ray.direction, record.normal), 1.0f);
+    float sin_theta = sqrtf(1.0f - cos_theta * cos_theta);
+    
+    thrust::uniform_real_distribution<float> u_01(0, 1);
+    if (0 && refractivity * sin_theta > 1.0f || schlick_fresnel_flectance(cos_theta, refractivity) > u_01(rng)) {
+        path_state.ray.position = record.position + 0.00001f * record.normal;
+        path_state.ray.direction = reflect(path_state.ray.direction, record.normal);
+    } else {
+        path_state.ray.position = record.position - 0.00001f * record.normal;
+        path_state.ray.direction = refract(path_state.ray.direction, record.normal, refractivity);
+    }
+    // path_state.ray.position = record.position - 0.00001f * record.normal;
+    // path_state.ray.direction = refract(path_state.ray.direction, record.normal, refractivity);
     path_state.ray.direction_inverse = 1.0f / path_state.ray.direction;
     --(path_state.remaining_iteration);
 }

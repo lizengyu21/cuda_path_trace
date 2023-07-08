@@ -7,6 +7,7 @@
 enum MaterialType {
     DIFFUSE,
     METAL,
+    DIELECTRIC,
 };
 
 class Material;
@@ -19,6 +20,8 @@ static __device__ MaterialShader diffuse_shader = direct_callable_diffuse;
 __device__ void direct_callable_metal(PathState &path_state, const HitRecord &record, thrust::default_random_engine &rng, Material material, Aabb *light_bounds, unsigned int light_count, DeviceBVH device_bvh, Material *materials);
 static __device__ MaterialShader metal_shader = direct_callable_metal;
 
+__device__ void direct_callable_dielectric(PathState &path_state, const HitRecord &record, thrust::default_random_engine &rng, Material material, Aabb *light_bounds, unsigned int light_count, DeviceBVH device_bvh, Material *materials);
+static __device__ MaterialShader dielectric_shader = direct_callable_dielectric;
 
 struct Material
 {
@@ -28,7 +31,9 @@ struct Material
     float roughness = 0.0f;
     // lightness
     float emittance = 0.0f;
-
+    // dielectric
+    float refractivity = 0.0f;
+    
     MaterialShader shader;
 
     Material(MaterialType type = MaterialType::DIFFUSE) {
@@ -38,6 +43,9 @@ struct Material
             break;
         case MaterialType::METAL:
             CHECK_CUDA_ERRORS(cudaMemcpyFromSymbol(&shader, metal_shader, sizeof(MaterialShader)));
+            break;
+        case MaterialType::DIELECTRIC:
+            CHECK_CUDA_ERRORS(cudaMemcpyFromSymbol(&shader, dielectric_shader, sizeof(MaterialShader)));
             break;
         default:
             break;

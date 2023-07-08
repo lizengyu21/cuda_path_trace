@@ -76,11 +76,12 @@ __global__ void generate_ray_from_camera(PathState *dev_path_state_buffer, Camer
         const float v = (1.0f * y_offseted) / (float)camera.pixel_vertical_length;
         float3 o_offset = make_float3(0, 0, 0);
         if (camera.radius > 0.00001f) {
-            float3 o_offset = random_on_unit_sphere(rng);
-            o_offset = camera.radius * (o_offset.x * unit(camera.horizontal) + o_offset.y * unit(camera.vertical));
+            float3 o_offset = camera.radius * random_on_unit_disk(rng);
+            assert(o_offset.y == 0.0f);
+            o_offset = o_offset.x * unit(camera.horizontal) + o_offset.y * unit(camera.vertical);
         }
         state.ray.position = camera.origin + o_offset;
-        state.ray.direction = unit(camera.lower_left_corner + u * camera.horizontal + v * camera.vertical - camera.origin - o_offset);
+        state.ray.direction = unit(camera.lower_left_corner + u * camera.horizontal + v * camera.vertical - state.ray.position);
         state.ray.direction_inverse = 1.0f / state.ray.direction;
         // set other params
         state.attenuation = make_float3(1, 1, 1);

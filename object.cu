@@ -17,6 +17,8 @@ __device__ void Sphere::intersect(const PathState &path_state, HitRecord &record
         record.position = hit_point;
         record.material_index = material_index;
         record.normal = unit(hit_point - origin);
+        record.outer = dot(path_state.ray.direction, record.normal) < 0;
+        record.normal = record.outer ? record.normal : -record.normal;
     }
 }
 
@@ -36,7 +38,8 @@ __device__ void Triangle::intersect(const PathState &path_state, HitRecord &reco
     if (t_tmp > 0 && t_tmp < record.t) {
         record.t = t_tmp;
         record.missed = false;
-        record.normal = (dot(path_state.ray.direction, this->normal) < 0) ? this->normal : -(this->normal);
+        record.outer = dot(path_state.ray.direction, this->normal) < 0;
+        record.normal = record.outer ? this->normal : -this->normal;
         record.position = path_state.intersaction_point(t_tmp);
         record.material_index = this->material_index;
     }

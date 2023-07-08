@@ -14,6 +14,7 @@ void SCENE1() {
     float roughness;
     float emittance;
     int trace_depth;
+    float r;
     std::clog << "SPP: ";
     std::cin >> SPP;
     std::clog << "depth: ";
@@ -22,6 +23,8 @@ void SCENE1() {
     std::cin >> roughness;
     std::clog << "emittance: ";
     std::cin >>emittance;
+    std::clog << "refractivity: ";
+    std::cin >> r;
 
     Render render;
     render.SPP = SPP;
@@ -47,12 +50,14 @@ void SCENE1() {
     render.host_material_buffer.push_back(Material());
     render.host_material_buffer[5].albedo = make_float3(0.6, 0.6, 0.6);
 
-    render.host_material_buffer.push_back(Material());
+    render.host_material_buffer.push_back(Material(MaterialType::DIELECTRIC));
+    render.host_material_buffer[6].refractivity = r;
     render.host_material_buffer[6].albedo = make_float3(0.8, 0.4, 0.8);
     
     std::vector<Sphere> spheres;
-    spheres.push_back(Sphere(make_float3(-2.5, -3, -11), 2, 6));
-    spheres.push_back(Sphere(make_float3(2.5, -3, -9), 2, 6));
+    spheres.push_back(Sphere(make_float3(-2.5, -3, -11), 2, 4));
+    spheres.push_back(Sphere(make_float3(0, -3, -8.5), 2, 6));
+    spheres.push_back(Sphere(make_float3(2.5, -3, -6), 2, 5));
     // spheres.push_back(Sphere(make_float3(1000, 0, -15), 995, 1));
     // spheres.push_back(Sphere(make_float3(-1000, 0, -15), 995, 2));
     // spheres.push_back(Sphere(make_float3(0, 10, -14), 3, 3));
@@ -63,6 +68,9 @@ void SCENE1() {
     std::vector<Triangle> triangles;
     triangles.push_back(Triangle(make_float3(-5, -5, -15), make_float3(-5, 5, -15), make_float3(5, -5, -15), 5));
     triangles.push_back(Triangle(make_float3(5, 5, -15), make_float3(-5, 5, -15), make_float3(5, -5, -15), 5));
+    
+    
+    
     triangles.push_back(Triangle(make_float3(-5, -5, -15), make_float3(-5, -5, -5), make_float3(-5, 5, -5), 0));
     triangles.push_back(Triangle(make_float3(-5, -5, -15), make_float3(-5, 5, -15), make_float3(-5, 5, -5), 0));
     triangles.push_back(Triangle(make_float3(5, -5, -15), make_float3(5, -5, -5), make_float3(5, 5, -5), 1));
@@ -135,7 +143,7 @@ void SCENE2() {
     spheres.push_back(Sphere(make_float3(2.5, -3, -9), 2, 4));
 
     std::vector<Triangle> triangles;
-    triangles.push_back(Triangle(make_float3(-5, -5, -15), make_float3(-5, 5, -15), make_float3(5, -5, -15), 5));
+    triangles.push_back(Triangle(make_float3(-5, 5, -15), make_float3(-5, -5, -15), make_float3(5, -5, -15), 5));
     triangles.push_back(Triangle(make_float3(5, 5, -15), make_float3(-5, 5, -15), make_float3(5, -5, -15), 5));
     triangles.push_back(Triangle(make_float3(-5, -5, -15), make_float3(-5, -5, -5), make_float3(-5, 5, -5), 0));
     triangles.push_back(Triangle(make_float3(-5, -5, -15), make_float3(-5, 5, -15), make_float3(-5, 5, -5), 0));
@@ -174,6 +182,7 @@ void SCENE3() {
     float z = -15;
     float length = 10;
     int trace_depth;
+    float r;
     std::clog << "SPP: ";
     std::cin >> SPP;
     std::clog << "depth: ";
@@ -182,6 +191,8 @@ void SCENE3() {
     std::cin >> roughness;
     std::clog << "emittance: ";
     std::cin >>emittance;
+    std::clog << "refractivity: ";
+    std::cin >> r;
 
     std::clog << "x: ";
     std::cin >> x;
@@ -214,13 +225,14 @@ void SCENE3() {
     render.host_material_buffer.push_back(Material());
     render.host_material_buffer[5].albedo = make_float3(0.6, 0.6, 0.6);
     
-    render.host_material_buffer.push_back(Material());
+    render.host_material_buffer.push_back(Material(MaterialType::DIELECTRIC));
+    render.host_material_buffer[6].refractivity = r;
     render.host_material_buffer[6].albedo = make_float3(0.8, 0.4, 0.8);
 
     thrust::host_vector<Sphere> spheres;
     thrust::host_vector<Triangle> triangles;
 
-    MeshTriangle mesh("./modules/bunny.obj", 4);
+    MeshTriangle mesh("./modules/bunny.obj", 6);
 
     // back plane
     triangles.push_back(Triangle(make_float3(x, y, z), make_float3(x, y + length, z), make_float3(x + length, y, z), 5));

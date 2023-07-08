@@ -20,6 +20,13 @@ inline float degree2radian(float degree) { return degree * M_PI / 180.0f; }
 __device__ __host__ inline float clamp(float min, float max, float t) { return t < min ? min : (t > max ? max : t); }
 __device__ __host__ inline float3 reflect(const float3 &v, const float3 &n) { return unit(v - 2.0f * dot(v, n) * n); }
 
+__device__ __host__ inline float3 refract(const float3& in, const float3& normal, float refractivity) {
+    auto cos_theta = fminf(dot(-in, normal), 1.0f);
+    float3 r_out_perp = refractivity * (in + cos_theta * normal);
+    float3 r_out_parallel = -sqrtf(fabs(1.0f - length_squared(r_out_perp))) * normal;
+    return unit(r_out_perp + r_out_parallel);
+}
+
 __device__ __host__ inline float3 random_on_unit_sphere(thrust::default_random_engine &rng) {
     thrust::uniform_real_distribution<float> u_01(0, 1);
     while (true) {
@@ -27,6 +34,11 @@ __device__ __host__ inline float3 random_on_unit_sphere(thrust::default_random_e
         if (length_squared(v) >= 1.0f) continue;
         return unit(v);
     }
+}
+
+__device__ __host__ inline float3 random_on_unit_disk(thrust::default_random_engine &rng) {
+    thrust::uniform_real_distribution<float> u_01(-1.0f, 1.0f);
+    return unit(make_float3(u_01(rng), u_01(rng), 0.0f));
 }
 
 __device__ __host__ inline float3 random_on_hemi_sphere(thrust::default_random_engine &rng, const float3 &n) {
